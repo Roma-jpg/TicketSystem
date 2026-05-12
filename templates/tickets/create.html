@@ -1,19 +1,101 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-<h1>Создать заявку</h1>
+{% extends "base.html" %}
 
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
+{% block title %}Новая заявка{% endblock %}
 
-    <button type="submit">
-        Отправить
-    </button>
-</form>
-</body>
-</html>
+{% block content %}
+<style>
+    .form-wrap {
+        max-width: 640px;
+    }
+
+    .form-wrap .card {
+        padding: 2rem 2.25rem;
+    }
+
+    .form-wrap h1 {
+        margin-bottom: 0.35rem;
+    }
+
+    .form-subtitle {
+        color: var(--text-3);
+        font-size: 0.92rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 1.25rem;
+    }
+
+    .field-full { grid-column: 1 / -1; }
+
+    .field-group {
+        margin-bottom: 1.2rem;
+    }
+
+    .field-group label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.82rem;
+        color: var(--text-2);
+        margin-bottom: 0.4rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .form-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .btn-cancel {
+        color: var(--text-3);
+        font-size: 0.9rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        padding: 0;
+    }
+
+    .btn-cancel:hover { color: var(--text); background: none; }
+
+    @media (max-width: 560px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .field-full { grid-column: 1; }
+    }
+</style>
+
+<div class="form-wrap">
+    <div class="card">
+        <h1>Создать заявку</h1>
+        <p class="form-subtitle">Опишите проблему - IT-специалист свяжется с вами как можно скорее.</p>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-grid">
+                {% for field in form %}
+                    <div class="field-group {% if field.name == 'description' or field.name == 'device_asset_tag' %}field-full{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <small style="color:var(--text-3); font-size:0.82rem;">{{ field.help_text }}</small>
+                        {% endif %}
+                        {% if field.errors %}
+                            <small style="color:var(--danger); font-size:0.82rem;">{{ field.errors|join:", " }}</small>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">Отправить заявку</button>
+                <a href="{% url 'home' %}" class="btn-cancel">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

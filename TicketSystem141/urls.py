@@ -1,20 +1,16 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include
-from django.urls import path
+from django.urls import include, path
+
+from apps.tickets import views as ticket_views
 
 urlpatterns = [
-	path("admin/", admin.site.urls),
-
-	path(
-		"tickets/",
-		include("apps.tickets.urls"),
-	),
+    path("", ticket_views.ticket_list, name="home"),
+    path("admin/", admin.site.urls),
+    path("accounts/", include("django.contrib.auth.urls")),
+    path("tickets/", include(("apps.tickets.urls", "tickets"), namespace="tickets")),
 ]
 
 if settings.DEBUG:
-	urlpatterns += static(
-		settings.MEDIA_URL,
-		document_root=settings.MEDIA_ROOT,
-	)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

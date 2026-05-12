@@ -1,13 +1,11 @@
-#version: '3.8'
-
 services:
   db:
     image: postgres:16
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: ticketing_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-ticketing_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
@@ -15,13 +13,14 @@ services:
 
   redis:
     image: redis:7-alpine
-    restart: always
+    restart: unless-stopped
     ports:
       - "6379:6379"
 
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    restart: unless-stopped
+    command: sh -c "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p 8000 TicketSystem141.asgi:application"
     volumes:
       - .:/app
     ports:
@@ -34,25 +33,27 @@ services:
 
   celery_worker:
     build: .
-    command: celery -A TicketSystem141 worker --loglevel=info
+    restart: unless-stopped
+    command: sh -c "celery -A TicketSystem141 worker --loglevel=info"
     volumes:
       - .:/app
     depends_on:
-      - redis
       - db
+      - redis
     env_file:
       - .env
 
   celery_beat:
     build: .
-    command: celery -A TicketSystem141 beat --loglevel=info
+    restart: unless-stopped
+    command: sh -c "celery -A TicketSystem141 beat --loglevel=info"
     volumes:
       - .:/app
     depends_on:
-      - redis
       - db
+      - redis
     env_file:
-      - .env
+      - ./.env
 
 volumes:
   postgres_data:

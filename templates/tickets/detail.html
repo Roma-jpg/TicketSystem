@@ -1,13 +1,293 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-<h1>{{ ticket.ticket_number }}</h1>
+{% extends "base.html" %}
 
-<p>Status: {{ ticket.status }}</p>
-<p>{{ ticket.description }}</p>
-</body>
-</html>
+{% block title %}{{ ticket.ticket_number }}{% endblock %}
+
+{% block content %}
+<style>
+    .detail-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .detail-header h1 { margin-bottom: 0.5rem; }
+
+    .detail-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1.25rem;
+    }
+
+    .info-item {}
+
+    .info-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-3);
+        margin-bottom: 0.2rem;
+    }
+
+    .info-value {
+        font-size: 0.97rem;
+        color: var(--text);
+    }
+
+    .description-box {
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .description-box .info-label { margin-bottom: 0.5rem; }
+    .description-box p { color: var(--text); line-height: 1.7; }
+
+    /* sections */
+    .section-title {
+        font-family: 'Lora', serif;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--accent-dk);
+        margin-bottom: 1rem;
+    }
+
+    /* forms inline */
+    .form-row {
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .form-row .field-group { flex: 1; min-width: 180px; margin-bottom: 0; }
+    .form-row .field-group label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-2);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.35rem;
+    }
+
+    /* comment list */
+    .comment-item {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1rem 1.15rem;
+        margin-bottom: 0.6rem;
+        background: var(--surface);
+    }
+
+    .comment-meta {
+        font-size: 0.82rem;
+        color: var(--text-3);
+        margin-bottom: 0.4rem;
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .comment-meta strong { color: var(--text-2); font-weight: 600; }
+
+    .comment-body { font-size: 0.95rem; line-height: 1.65; }
+
+    /* history */
+    .history-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.65rem 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.88rem;
+        color: var(--text-2);
+    }
+
+    .history-item:last-child { border-bottom: none; }
+
+    .history-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex-shrink: 0;
+        margin-top: 0.35rem;
+    }
+
+    .history-time { color: var(--text-3); white-space: nowrap; }
+
+    /* attachment */
+    .attachment-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--accent);
+        font-size: 0.9rem;
+    }
+
+    .empty-note { color: var(--text-3); font-size: 0.9rem; font-style: italic; }
+
+    @media (max-width: 600px) {
+        .form-row { flex-direction: column; }
+        .info-grid { grid-template-columns: 1fr 1fr; }
+    }
+</style>
+
+<!-- TICKET HEADER -->
+<div class="card">
+    <div class="detail-header">
+        <div>
+            <h1>{{ ticket.ticket_number }}</h1>
+            <div class="detail-badges">
+                <span class="badge {% if ticket.status == 'open' or ticket.status == 'reopened' %}badge-open{% elif ticket.status == 'resolved' %}badge-resolved{% elif ticket.status == 'closed' %}badge-closed{% endif %}">
+                    {{ ticket.get_status_display }}
+                </span>
+                <span class="badge {% if ticket.urgency == 'high' %}badge-high{% elif ticket.urgency == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+                    {{ ticket.get_urgency_display }}
+                </span>
+                {% if ticket.is_overdue %}
+                    <span class="badge badge-high">Просрочена</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">Кабинет</div>
+            <div class="info-value">{{ ticket.room_number }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Тип устройства</div>
+            <div class="info-value">{{ ticket.get_device_type_display }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Категория</div>
+            <div class="info-value">{{ ticket.get_category_display }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Создал</div>
+            <div class="info-value">{{ ticket.created_by.username }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Создана</div>
+            <div class="info-value">{{ ticket.created_at|date:"d.m.Y H:i" }}</div>
+        </div>
+        {% if ticket.assigned_to %}
+        <div class="info-item">
+            <div class="info-label">Назначен</div>
+            <div class="info-value">{{ ticket.assigned_to.username }}</div>
+        </div>
+        {% endif %}
+        {% if ticket.device_asset_tag %}
+        <div class="info-item">
+            <div class="info-label">Инвентарный номер</div>
+            <div class="info-value">{{ ticket.device_asset_tag }}</div>
+        </div>
+        {% endif %}
+        {% if ticket.resolved_at %}
+        <div class="info-item">
+            <div class="info-label">Решена</div>
+            <div class="info-value">{{ ticket.resolved_at|date:"d.m.Y H:i" }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="description-box">
+        <div class="info-label">Описание проблемы</div>
+        <p>{{ ticket.description|linebreaks }}</p>
+    </div>
+</div>
+
+<!-- ATTACHMENTS LIST -->
+<div class="card">
+    <div class="section-title">Вложения</div>
+    {% if ticket.attachments.all %}
+        <ul style="margin-bottom:1.25rem;">
+            {% for att in ticket.attachments.all %}
+                <li style="border-radius:8px; padding:0.65rem 1rem;">
+                    <a class="attachment-link" href="{{ att.file.url }}">
+                        <span>📎</span> {{ att.file.name }}
+                    </a>
+                    <span style="color:var(--text-3); font-size:0.82rem; margin-left:0.75rem;">
+                        {{ att.uploaded_by.username }}, {{ att.uploaded_at|date:"d.m.Y H:i" }}
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="empty-note" style="margin-bottom:1.25rem;">Вложений нет.</p>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="attachment">
+        <div class="form-row">
+            <div class="field-group">
+                <label for="{{ attachment_form.file.id_for_label }}">{{ attachment_form.file.label }}</label>
+                {{ attachment_form.file }}
+            </div>
+            <button type="submit" class="btn">Загрузить</button>
+        </div>
+    </form>
+</div>
+
+<!-- COMMENTS -->
+<div class="card">
+    <div class="section-title">Комментарии</div>
+    {% if ticket.comments.all %}
+        <div style="margin-bottom:1.5rem;">
+            {% for comment in ticket.comments.all %}
+                <div class="comment-item">
+                    <div class="comment-meta">
+                        <strong>{{ comment.author.username }}</strong>
+                        <span>{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+                        {% if comment.internal %}<span style="color:var(--warn);">Внутренний</span>{% endif %}
+                    </div>
+                    <div class="comment-body">{{ comment.comment|linebreaks }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-note" style="margin-bottom:1.5rem;">Комментариев пока нет.</p>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="comment">
+        <div class="field-group" style="margin-bottom:0.75rem;">
+            <label for="{{ comment_form.comment.id_for_label }}">{{ comment_form.comment.label }}</label>
+            {{ comment_form.comment }}
+        </div>
+        <button type="submit" class="btn">Отправить комментарий</button>
+    </form>
+</div>
+
+<!-- HISTORY -->
+<div class="card">
+    <div class="section-title">История изменений</div>
+    {% if ticket.history.all %}
+        <div>
+            {% for item in ticket.history.all %}
+                <div class="history-item">
+                    <div class="history-dot"></div>
+                    <div>
+                        <span class="history-time">{{ item.changed_at|date:"d.m.Y H:i" }}</span>
+                        -
+                        {% if item.old_status %}{{ item.get_old_status_display }} &rarr; {% endif %}{{ item.get_new_status_display }}
+                        {% if item.note %}<span style="color:var(--text-3);">&nbsp;- {{ item.note }}</span>{% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-note">История пуста.</p>
+    {% endif %}
+</div>
+{% endblock %}

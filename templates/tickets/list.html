@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Список заявок{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .page-header h1 { margin-bottom: 0; }
+
+    .ticket-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.1rem;
+        padding: 1.1rem 1.3rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        margin-bottom: 0.6rem;
+        transition: box-shadow 0.15s, border-color 0.15s;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .ticket-item:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        border-color: #b8cfe0;
+        text-decoration: none;
+    }
+
+    .ticket-top {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.4rem;
+    }
+
+    .ticket-number {
+        font-family: 'Lora', serif;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--accent);
+    }
+
+    .ticket-meta {
+        font-size: 0.83rem;
+        color: var(--text-3);
+        margin-top: 0.35rem;
+        display: flex;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+    }
+
+    .ticket-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3.5rem 2rem;
+        color: var(--text-3);
+    }
+
+    .empty-state .empty-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+        opacity: 0.5;
+    }
+
+    .empty-state p {
+        font-size: 1rem;
+        margin-bottom: 1.25rem;
+    }
+</style>
+
+<div class="page-header">
+    <h1>Все заявки</h1>
+    <a href="{% url 'tickets:ticket_create' %}" class="btn">+ Создать заявку</a>
+</div>
+
+{% if tickets %}
+    <div>
+        {% for ticket in tickets %}
+            <a class="ticket-item" href="{% url 'tickets:ticket_detail' ticket.pk %}">
+                <div class="ticket-top">
+                    <span class="ticket-number">{{ ticket.ticket_number }}</span>
+                    <span class="badge {% if ticket.status == 'open' or ticket.status == 'reopened' %}badge-open{% elif ticket.status == 'resolved' %}badge-resolved{% elif ticket.status == 'closed' %}badge-closed{% endif %}">
+                        {{ ticket.get_status_display }}
+                    </span>
+                    <span class="badge {% if ticket.urgency == 'high' %}badge-high{% elif ticket.urgency == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+                        {{ ticket.get_urgency_display }}
+                    </span>
+                    <span class="badge">Каб. {{ ticket.room_number }}</span>
+                </div>
+                <div class="ticket-meta">
+                    <span>Создал: {{ ticket.created_by.username }}</span>
+                    <span>Обновлён: {{ ticket.updated_at|date:"d.m.Y H:i" }}</span>
+                    {% if ticket.assigned_to %}
+                        <span>Назначен: {{ ticket.assigned_to.username }}</span>
+                    {% endif %}
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>Заявок пока нет.</p>
+            <a href="{% url 'tickets:ticket_create' %}" class="btn">Создать первую заявку</a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
