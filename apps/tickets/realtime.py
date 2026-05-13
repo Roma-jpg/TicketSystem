@@ -1,3 +1,4 @@
+# apps/tickets/realtime.py
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
@@ -13,7 +14,7 @@ def serialize_ticket(ticket):
     }
 
 
-def broadcast_ticket_event(ticket, event_name, message=""):
+def broadcast_ticket_event(ticket, event_name, message="", data=None):
     channel_layer = get_channel_layer()
     if channel_layer is None:
         return
@@ -23,7 +24,9 @@ def broadcast_ticket_event(ticket, event_name, message=""):
         "ticket": serialize_ticket(ticket),
         "message": message,
     }
+    if data:
+        payload.update(data)
     try:
-        async_to_sync(channel_layer.group_send)("tickets", payload)
+        async_to_sync(channel_layer.group_send)(f"ticket_{ticket.pk}", payload)
     except Exception:
         pass
