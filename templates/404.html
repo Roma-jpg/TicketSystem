@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Страница не найдена{% endblock %}
+{% load static %}
+{% block content %}
+<style>
+    /* Hide navigation to keep the focus on the "Lost" feeling */
+    nav, .navbar, header, .top-bar {
+        display: none !important;
+    }
+
+    .error-wrap {
+        min-height: 100vh;
+        width: 100vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 0;
+        left: 0;
+        /* Using a slightly different forest image for the 404 vibe */
+        background: url('{% static 'images/forest_background.jpg' %}') no-repeat center center;
+        background-size: cover;
+        z-index: 9999;
+    }
+
+    .error-wrap::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(50px);
+        -webkit-backdrop-filter: blur(50px);
+        z-index: 1;
+    }
+
+    .error-card {
+        position: relative;
+        z-index: 2;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 32px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        padding: 4rem 2rem;
+        width: 90%;
+        max-width: 500px;
+        text-align: center;
+        animation: floatUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes floatUp {
+        from { opacity: 0; transform: translateY(40px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .error-code {
+        font-size: 6rem;
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.2);
+        line-height: 1;
+        margin-bottom: 1rem;
+        font-family: 'Source Sans 3', sans-serif;
+    }
+
+    .error-title {
+        font-family: 'Lora', serif;
+        font-size: 1.8rem;
+        color: #fff;
+        margin-bottom: 1rem;
+    }
+
+    .error-message {
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 2.5rem;
+        line-height: 1.6;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        color: #1b4332; /* Using your Forest Green accent */
+        padding: 1rem 2rem;
+        border-radius: 16px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .back-btn:hover {
+        transform: translateY(-3px);
+        background: #f0f4f1;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+
+    /* Interactive Footer from previous turn */
+    .footer-credit {
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.8rem;
+        z-index: 10000;
+        pointer-events: auto;
+        transition: transform 1.0s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        cursor: default;
+        
+        background: linear-gradient(
+            90deg, 
+            rgba(255, 255, 255, 0.4) 0%, 
+            rgba(255, 255, 255, 0.4) 40%, 
+            rgba(255, 255, 255, 1) 50%, 
+            rgba(255, 255, 255, 0.4) 60%, 
+            rgba(255, 255, 255, 0.4) 100%
+        );
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .footer-credit.active {
+        transform: translateX(-50%) translateY(-10px);
+        animation: sunbeam 4.0s infinite linear;
+    }
+
+    @keyframes sunbeam {
+        0% { background-position: 200% center; }
+        100% { background-position: -200% center; }
+    }
+</style>
+
+<div class="error-wrap">
+    <div class="error-card">
+        <div class="error-code">404</div>
+        <h1 class="error-title">Похоже, вы сбились с пути</h1>
+        <p class="error-message">
+            Страница, которую вы ищете, не существует или она была перемещена.
+        </p>
+        <a href="{% url 'home' %}" class="back-btn">На главную</a>
+    </div>
+</div>
+
+<div class="footer-credit">
+    Сделано Кошелевым Романом с ❤️
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const footer = document.querySelector('.footer-credit');
+    if (footer) {
+        footer.addEventListener('mouseenter', () => footer.classList.add('active'));
+        footer.addEventListener('mouseleave', () => footer.classList.remove('active'));
+    }
+});
+</script>
+{% endblock %}

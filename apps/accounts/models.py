@@ -29,5 +29,8 @@ class User(AbstractUser):
             self.Roles.IT_ADMIN
         ]
 
+    def is_principal(self):
+        return self.role == self.Roles.PRINCIPAL
+
     def __str__(self):
         return self.username

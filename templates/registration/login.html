@@ -1,202 +1,246 @@
 {% extends "base.html" %}
 
 {% block title %}Вход в систему{% endblock %}
-
+{% load static %}
 {% block content %}
 <style>
+    /* 1. HIDE TOP NAV/BLUE BAR */
+    nav, .navbar, header, .top-bar {
+    display: none !important;
+    }
+
     .login-wrap {
-        min-height: calc(100vh - 200px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem 1rem;
+    min-height: 100vh;
+    min-height: 100dvh;   /* dynamic viewport height */
+    height: 100%;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: url('{% static 'images/forest_background.jpg' %}') no-repeat center center;
+    background-size: cover;
+    z-index: 9999;
+    overflow-y: auto;
+    }
+
+    .login-wrap::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(60px);
+    -webkit-backdrop-filter: blur(60px);
+    z-index: 1;
     }
 
     .login-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        box-shadow: var(--shadow-md);
-        padding: 2.75rem 2.5rem;
-        width: 100%;
-        max-width: 420px;
+    position: relative;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 28px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    padding: 3rem 2.5rem;
+    width: 100%;
+    max-width: 400px;
+    animation: slideUpFade 0.7s ease-out;
     }
 
-    .login-logo {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-
-    .login-logo-icon {
-        width: 56px;
-        height: 56px;
-        background: var(--accent-dk);
-        border-radius: 14px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 14px rgba(30,61,92,0.25);
-    }
-
-    .login-logo-icon svg {
-        width: 28px;
-        height: 28px;
-        fill: none;
-        stroke: #fff;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
+    @keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
     }
 
     .login-title {
-        font-family: 'Lora', serif;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--accent-dk);
-        margin-bottom: 0.3rem;
+    font-family: 'Lora', serif;
+    font-size: 1.6rem;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 0.5rem;
     }
 
     .login-sub {
-        font-size: 0.88rem;
-        color: var(--text-3);
-    }
-
-    .login-error {
-        background: #fdf0ef;
-        border: 1px solid #f0b8b4;
-        border-left: 3px solid var(--danger);
-        color: #7b1c14;
-        padding: 0.7rem 1rem;
-        border-radius: 8px;
-        margin-bottom: 1.25rem;
-        font-size: 0.9rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    margin-bottom: 2.5rem;
     }
 
     .field-group {
-        margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
     }
 
     .field-group label {
-        display: block;
-        font-weight: 600;
-        font-size: 0.82rem;
-        color: var(--text-2);
-        margin-bottom: 0.4rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    display: block;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
     }
 
-    .field-group input[type="text"],
-    .field-group input[type="password"] {
-        width: 100%;
-        padding: 0.7rem 0.95rem;
-        border: 1.5px solid var(--border);
-        border-radius: 9px;
-        font-family: inherit;
-        font-size: 0.97rem;
-        color: var(--text);
-        background: var(--bg);
-        transition: border-color 0.15s, box-shadow 0.15s;
-        outline: none;
+    .field-group input {
+    width: 100%;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    outline: none;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    }
+
+    /* 2. FIX EDGE/CHROME AUTOFILL WHITE BACKGROUND */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+    caret-color: white;
     }
 
     .field-group input:focus {
-        border-color: var(--accent);
-        background: #fff;
-        box-shadow: 0 0 0 3px rgba(43,82,120,0.12);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
     }
 
-    .remember-row {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .remember-row input[type="checkbox"] {
-        width: 17px;
-        height: 17px;
-        accent-color: var(--accent);
-        cursor: pointer;
-        flex-shrink: 0;
-        border-radius: 4px;
-    }
-
-    .remember-row label {
-        font-size: 0.9rem;
-        color: var(--text-2);
-        font-weight: 400;
-        text-transform: none;
-        letter-spacing: 0;
-        cursor: pointer;
-        margin: 0;
-    }
-
+    /* 3. CENTERED BUTTON TEXT */
     .login-btn {
-        width: 100%;
-        justify-content: center;
-        padding: 0.75rem 1.4rem;
-        font-size: 1rem;
-        border-radius: 9px;
-        letter-spacing: 0.02em;
-        margin-bottom: 0;
+    width: 100%;
+    background: #ffffff;
+    color: #2d4a53;
+    border: none;
+    padding: 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+    }
+
+    .login-btn:hover {
+    background: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .guest-link {
+    display: block;
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    }
+
+    /* ---------- FIXED footer credit ---------- */
+    .footer-credit {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    max-width: 90vw;
+    padding: 0 1rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    z-index: 10000;
+    pointer-events: auto;
+    text-align: center;
+    cursor: default;
+    white-space: nowrap;
+    transition: transform 2.0s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.4) 40%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 255, 255, 0.4) 60%,
+    rgba(255, 255, 255, 0.4) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    }
+
+    .footer-credit.active {
+    transform: translateX(-50%) translateY(-10px);
+    animation: sunbeam 5.0s infinite linear;
+    }
+
+    @keyframes sunbeam {
+    0% { background-position: 200% center; }
+    100% { background-position: -200% center; }
     }
 </style>
 
-<div class="login-wrap">
+<div class="login-wrap" id="loginWrap">
     <div class="login-card">
-        <div class="login-logo">
-            <div class="login-logo-icon">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-            </div>
-            <div class="login-title">Добро пожаловать</div>
-            <div class="login-sub">Войдите в IT портал поддержки</div>
+        <div class="login-logo" style="text-align: center; margin-bottom: 1rem;">
+            <svg viewBox="0 0 24 24" width="40" height="40" stroke="white" stroke-width="1.5" fill="none"
+                 style="opacity: 0.9;">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
         </div>
-
-        {% if form.errors %}
-            <div class="login-error">
-                Неверный логин или пароль. Попробуйте ещё раз.
-            </div>
-        {% endif %}
+        <div class="login-title">Добро пожаловать</div>
+        <div class="login-sub">IT портал поддержки</div>
 
         <form method="post">
             {% csrf_token %}
-
             <div class="field-group">
                 <label for="id_username">Имя пользователя</label>
-                <input type="text"
-                       name="username"
-                       id="id_username"
-                       autocomplete="username"
-                       autofocus
-                       placeholder="Введите логин"
-                       {% if form.username.value %}value="{{ form.username.value }}"{% endif %}>
+                <input type="text" name="username" id="id_username" autocomplete="username" autofocus
+                       placeholder="Логин">
             </div>
 
             <div class="field-group">
                 <label for="id_password">Пароль</label>
-                <input type="password"
-                       name="password"
-                       id="id_password"
-                       autocomplete="current-password"
-                       placeholder="Введите пароль">
+                <input type="password" name="password" id="id_password" autocomplete="current-password"
+                       placeholder="Пароль">
             </div>
 
-            <div class="remember-row">
-                <input type="checkbox" name="remember_me" id="id_remember_me">
-                <label for="id_remember_me">Запомнить меня</label>
-            </div>
+            <button type="submit" class="login-btn">Войти</button>
 
-            {% if next %}
-                <input type="hidden" name="next" value="{{ next }}">
-            {% endif %}
-
-            <button type="submit" class="btn login-btn">Войти</button>
+            <a href="{% url 'tickets:guest_ticket_create' %}" class="guest-link">Режим гостя</a>
         </form>
     </div>
 </div>
+
+<div class="footer-credit">
+    Сделано Кошелевым Романом с ❤️
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const footer = document.querySelector('.footer-credit');
+    if (footer) {
+    footer.addEventListener('mouseenter', () => footer.classList.add('active'));
+    footer.addEventListener('mouseleave', () => footer.classList.remove('active'));
+    }
+
+    // Fix mobile keyboard gap
+    const wrap = document.getElementById('loginWrap');
+    function resizeWrap() {
+    if (wrap) {
+    wrap.style.height = window.innerHeight + 'px';
+    }
+    }
+    window.addEventListener('resize', resizeWrap);
+    window.addEventListener('orientationchange', resizeWrap);
+    resizeWrap();
+    });
+</script>
 {% endblock %}

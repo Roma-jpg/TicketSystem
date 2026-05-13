@@ -1,7 +1,9 @@
 # apps/tickets/realtime.py
+import logging
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
+logger = logging.getLogger(__name__)
 
 def serialize_ticket(ticket):
     return {
@@ -12,7 +14,6 @@ def serialize_ticket(ticket):
         "room_number": ticket.room_number,
         "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
     }
-
 
 def broadcast_ticket_event(ticket, event_name, message="", data=None):
     channel_layer = get_channel_layer()
@@ -29,4 +30,4 @@ def broadcast_ticket_event(ticket, event_name, message="", data=None):
     try:
         async_to_sync(channel_layer.group_send)(f"ticket_{ticket.pk}", payload)
     except Exception:
-        pass
+        logger.exception("Failed to broadcast ticket event %s for ticket %s", event_name, ticket.pk)

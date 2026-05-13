@@ -1,87 +1,281 @@
 {% extends "base.html" %}
 
 {% block title %}Список заявок{% endblock %}
-
+{% load static %}
 {% block content %}
 <style>
-    .page-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1.5rem;
-        flex-wrap: wrap;
-        gap: 1rem;
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 { margin-bottom: 0; }
+
+/* ── TICKET LIST ── */
+.ticket-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.ticket-item {
+    padding: 1.1rem 1.3rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: box-shadow 0.15s, border-color 0.15s,
+                opacity 0.3s ease, transform 0.3s ease, max-height 0.35s ease, margin 0.3s ease;
+    overflow: hidden;
+}
+
+.ticket-item:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    border-color: #b8cfe0;
+    text-decoration: none;
+}
+
+/* Fade-out when disappearing after search */
+.ticket-item.is-hiding {
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+}
+
+/* After removal, collapse height smoothly */
+.ticket-item.is-collapsed {
+    max-height: 0 !important;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+    border-width: 0;
+    opacity: 0;
+}
+
+.ticket-top {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.4rem;
+}
+
+.ticket-number {
+    font-family: 'Lora', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.ticket-meta {
+    font-size: 0.83rem;
+    color: var(--text-3);
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.ticket-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3.5rem 2rem;
+    color: var(--text-3);
+}
+
+.empty-state .empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-size: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+/* ── PAGINATION ── */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.pagination .btn {
+    padding: 0.4rem 1rem;
+    font-size: 0.88rem;
+}
+
+.pagination .current {
+    font-size: 0.9rem;
+    color: var(--text-2);
+    font-weight: 500;
+}
+
+/* ── FILTER CARD ── */
+.filter-card {
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.filter-card-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.65rem 1rem;
+}
+
+/* ── SEARCH TOGGLE (compact) ── */
+.search-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 0.32rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    color: var(--text-2);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.search-toggle:hover {
+    background: var(--surface-2, #f5f8fb);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.search-toggle.is-active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.search-toggle svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    fill: none;
+    flex-shrink: 0;
+}
+
+/* ── FILTER BODY (animated) ── */
+.filter-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.22s ease;
+    opacity: 0;
+}
+
+.filter-body.is-open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.filter-body-inner {
+    overflow: hidden;
+}
+
+.filter-body-content {
+    padding: 0 1.25rem 1.25rem;
+    border-top: 1px solid var(--border);
+}
+
+/* ── FILTER FIELDS ── */
+.filter-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem 1rem;
+    margin-top: 1rem;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 140px;
+    flex: 1 1 140px;
+}
+
+.filter-field label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-3);
+}
+
+/* Tighten up form controls inside filter */
+.filter-body input,
+.filter-body select {
+    font-size: 0.88rem;
+    padding: 0.38rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-1, inherit);
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+
+.filter-body input:focus,
+.filter-body select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Date inputs specifically */
+.filter-body input[type="date"] {
+    min-width: 140px;
+}
+
+/* ── FILTER ACTIONS ── */
+.filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 1.1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.filter-actions .btn {
+    padding: 0.42rem 1.1rem;
+    font-size: 0.86rem;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 500px) {
+    .filter-field {
+        flex: 1 1 100%;
     }
-
-    .page-header h1 { margin-bottom: 0; }
-
-    .ticket-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 1.1rem;
-        padding: 1.1rem 1.3rem;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        margin-bottom: 0.6rem;
-        transition: box-shadow 0.15s, border-color 0.15s;
-        text-decoration: none;
-        color: inherit;
-        display: block;
-    }
-
-    .ticket-item:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-        border-color: #b8cfe0;
-        text-decoration: none;
-    }
-
-    .ticket-top {
-        display: flex;
-        align-items: center;
-        gap: 0.7rem;
-        flex-wrap: wrap;
-        margin-bottom: 0.4rem;
-    }
-
-    .ticket-number {
-        font-family: 'Lora', serif;
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--accent);
-    }
-
     .ticket-meta {
-        font-size: 0.83rem;
-        color: var(--text-3);
-        margin-top: 0.35rem;
-        display: flex;
-        gap: 1.25rem;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 0.35rem;
     }
-
-    .ticket-meta span {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 3.5rem 2rem;
-        color: var(--text-3);
-    }
-
-    .empty-state .empty-icon {
-        font-size: 2.5rem;
-        margin-bottom: 0.75rem;
-        opacity: 0.5;
-    }
-
-    .empty-state p {
-        font-size: 1rem;
-        margin-bottom: 1.25rem;
-    }
+}
 </style>
 
 <div class="page-header">
@@ -89,37 +283,129 @@
     <a href="{% url 'tickets:ticket_create' %}" class="btn">+ Создать заявку</a>
 </div>
 
-{% if tickets %}
-    <div>
-        {% for ticket in tickets %}
-            <a class="ticket-item" href="{% url 'tickets:ticket_detail' ticket.pk %}">
-                <div class="ticket-top">
-                    <span class="ticket-number">{{ ticket.ticket_number }}</span>
-                    <span class="badge {% if ticket.status == 'open' or ticket.status == 'reopened' %}badge-open{% elif ticket.status == 'resolved' %}badge-resolved{% elif ticket.status == 'closed' %}badge-closed{% endif %}">
-                        {{ ticket.get_status_display }}
-                    </span>
-                    <span class="badge {% if ticket.urgency == 'high' %}badge-high{% elif ticket.urgency == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
-                        {{ ticket.get_urgency_display }}
-                    </span>
-                    <span class="badge">Каб. {{ ticket.room_number }}</span>
-                </div>
-                <div class="ticket-meta">
-                    <span>Создал: {{ ticket.created_by.username }}</span>
-                    <span>Обновлён: {{ ticket.updated_at|date:"d.m.Y H:i" }}</span>
-                    {% if ticket.assigned_to %}
-                        <span>Назначен: {{ ticket.assigned_to.username }}</span>
-                    {% endif %}
-                </div>
-            </a>
-        {% endfor %}
+<div class="filter-card">
+    <div class="filter-card-header">
+        <button type="button" class="search-toggle" id="searchToggleBtn" aria-expanded="false" aria-controls="filterBody">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="10.5" cy="10.5" r="6.5"/>
+                <line x1="21" y1="21" x2="15.5" y2="15.5"/>
+            </svg>
+            <span>Поиск и фильтры</span>
+        </button>
     </div>
-{% else %}
-    <div class="card">
-        <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <p>Заявок пока нет.</p>
-            <a href="{% url 'tickets:ticket_create' %}" class="btn">Создать первую заявку</a>
+
+    <div class="filter-body" id="filterBody" role="region">
+        <div class="filter-body-inner">
+            <div class="filter-body-content">
+                <form method="get" id="filterForm">
+                    <div class="filter-fields">
+                        {% for field in filter.form %}
+                        <div class="filter-field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="filter-actions">
+                        <button type="submit" class="btn">Применить</button>
+                        <a href="{% url 'tickets:ticket_list' %}" class="btn-cancel">Сбросить</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
+</div>
+
+{% if tickets %}
+<div class="ticket-list" id="ticketList">
+{% for ticket in tickets %}
+<a class="ticket-item" href="{% url 'tickets:ticket_detail' ticket.pk %}">
+    <div class="ticket-top">
+        <span class="ticket-number">{{ ticket.ticket_number }}</span>
+        <span class="badge {% if ticket.status == 'open' or ticket.status == 'reopened' %}badge-open{% elif ticket.status == 'resolved' %}badge-resolved{% elif ticket.status == 'closed' %}badge-closed{% endif %}">
+            {{ ticket.get_status_display }}
+        </span>
+        <span class="badge {% if ticket.urgency == 'high' %}badge-high{% elif ticket.urgency == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+            {{ ticket.get_urgency_display }}
+        </span>
+        <span class="badge">Каб. {{ ticket.room_number }}</span>
+    </div>
+    <div class="ticket-meta">
+        <span>Создал: {{ ticket.submitted_by_display }}</span>
+        <span>Обновлён: {{ ticket.updated_at|date:"d.m.Y H:i" }}</span>
+        {% if ticket.assigned_to %}
+        <span>Назначен: {{ ticket.assigned_to.username }}</span>
+        {% endif %}
+    </div>
+</a>
+{% endfor %}
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+    <a class="btn" href="?page={{ page_obj.previous_page_number }}">← Назад</a>
+    {% endif %}
+    <span class="current">
+        Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+    </span>
+    {% if page_obj.has_next %}
+    <a class="btn" href="?page={{ page_obj.next_page_number }}">Вперёд →</a>
+    {% endif %}
+</div>
 {% endif %}
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p>Заявок пока нет.</p>
+        <a href="{% url 'tickets:ticket_create' %}" class="btn">Создать первую заявку</a>
+    </div>
+</div>
+{% endif %}
+
+<script>
+(function () {
+    /* ── Search toggle ── */
+    const toggleBtn = document.getElementById('searchToggleBtn');
+    const filterBody = document.getElementById('filterBody');
+
+    if (toggleBtn && filterBody) {
+        // If page loaded with active filters, open panel right away (no animation flash)
+        const params = new URLSearchParams(window.location.search);
+        const hasFilters = [...params.keys()].some(k => k !== 'page' && params.get(k) !== '');
+        if (hasFilters) {
+            filterBody.classList.add('is-open');
+            toggleBtn.classList.add('is-active');
+            toggleBtn.setAttribute('aria-expanded', 'true');
+        }
+
+        toggleBtn.addEventListener('click', function () {
+            const open = filterBody.classList.toggle('is-open');
+            toggleBtn.classList.toggle('is-active', open);
+            toggleBtn.setAttribute('aria-expanded', String(open));
+        });
+    }
+
+    /* ── Post-submit fade-out & collapse for removed items ──
+       This fires when the page reloads after a filter is applied.
+       Items that were present before but are gone now can't be
+       animated server-side, so instead we animate items *entering*
+       the new (smaller) list upward via a stagger. ── */
+    const ticketList = document.getElementById('ticketList');
+    if (ticketList) {
+        const items = ticketList.querySelectorAll('.ticket-item');
+        items.forEach(function (item, i) {
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(10px)';
+            item.style.transition = 'opacity 0.25s ease, transform 0.25s ease, box-shadow 0.15s, border-color 0.15s';
+            // Stagger each item
+            setTimeout(function () {
+                item.style.opacity = '';
+                item.style.transform = '';
+            }, 40 + i * 40);
+        });
+    }
+})();
+</script>
 {% endblock %}

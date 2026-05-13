@@ -4,68 +4,51 @@
 
 {% block content %}
 <style>
-    .form-wrap {
-        max-width: 640px;
-    }
-
-    .form-wrap .card {
-        padding: 2rem 2.25rem;
-    }
-
-    .form-wrap h1 {
-        margin-bottom: 0.35rem;
-    }
-
-    .form-subtitle {
-        color: var(--text-3);
-        font-size: 0.92rem;
-        margin-bottom: 1.75rem;
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0 1.25rem;
-    }
-
+    .form-wrap { max-width: 700px; }
+    .form-wrap .card { padding: 2rem 2.25rem; }
+    .form-wrap h1 { margin-bottom: 0.35rem; }
+    .form-subtitle { color: var(--text-3); font-size: 0.92rem; margin-bottom: 1.75rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
     .field-full { grid-column: 1 / -1; }
-
-    .field-group {
-        margin-bottom: 1.2rem;
-    }
-
-    .field-group label {
-        display: block;
-        font-weight: 600;
-        font-size: 0.82rem;
-        color: var(--text-2);
-        margin-bottom: 0.4rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .form-actions {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-top: 0.5rem;
-    }
-
-    .btn-cancel {
-        color: var(--text-3);
-        font-size: 0.9rem;
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-family: inherit;
-        padding: 0;
-    }
-
+    .field-group { margin-bottom: 1.2rem; }
+    .field-group label { display: block; font-weight: 600; font-size: 0.82rem; color: var(--text-2); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-actions { display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
+    .btn-cancel { color: var(--text-3); font-size: 0.9rem; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
     .btn-cancel:hover { color: var(--text); background: none; }
 
+    /* urgency warning */
+    .urgency-warning {
+        background: #fdf0ef;
+        border-left: 3px solid var(--danger);
+        color: #7b1c14;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        margin-top: 0.4rem;
+    }
+
+    /* Attachment area */
+    .attachments-area { margin-top: 1rem; border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; background: var(--surface-2); }
+    .attachments-area:hover { border-color: var(--accent); }
+    .attachments-area input[type="file"] { display: none; }
+    .file-previews { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; }
+    .file-preview { position: relative; width: 100px; height: 100px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; display: flex; align-items: center; justify-content: center; }
+    .file-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .file-preview .file-name { font-size: 0.7rem; color: var(--text-3); padding: 0.25rem; text-align: center; word-break: break-all; }
+    .remove-btn { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; background: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; line-height: 1; cursor: pointer; border: none; }
+
+    /* ── MOBILE ── */
     @media (max-width: 560px) {
-        .form-grid { grid-template-columns: 1fr; }
-        .field-full { grid-column: 1; }
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        .field-full {
+            grid-column: 1;
+        }
+        .form-actions {
+            flex-direction: column;
+            align-items: flex-start;
+        }
     }
 </style>
 
@@ -87,8 +70,29 @@
                         {% if field.errors %}
                             <small style="color:var(--danger); font-size:0.82rem;">{{ field.errors|join:", " }}</small>
                         {% endif %}
+
+                        {% if field.name == "urgency" %}
+                            <div class="urgency-warning" id="urgencyWarning" hidden>
+                                ⚠️ <strong>Средняя</strong> — часть оборудования не работает, но есть альтернативные способы работы.<br>
+                                <strong>Высокая</strong> — полностью остановлен учебный процесс, требуется немедленное вмешательство.<br>
+                                Пожалуйста, выбирайте объективно – от этого зависит порядок обработки заявок.
+                            </div>
+                        {% endif %}
                     </div>
                 {% endfor %}
+            </div>
+
+            <!-- Attachment area -->
+            <div class="field-group">
+                <label>Прикрепить файлы (не больше 50 МБ всего)</label>
+                <div class="attachments-area" id="dropZone">
+                    <p style="color:var(--text-3);">Перетащите файлы сюда или кликните для выбора</p>
+                    <input type="file" name="files" id="id_files" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx">
+                </div>
+                <div class="file-previews" id="filePreviews"></div>
+                {% if attachment_form.files.errors %}
+                    <small style="color:var(--danger); font-size:0.82rem;">{{ attachment_form.files.errors|join:", " }}</small>
+                {% endif %}
             </div>
 
             <div class="form-actions">
@@ -98,4 +102,83 @@
         </form>
     </div>
 </div>
+
+<script>
+    // Urgency warning
+    const urgencySelect = document.getElementById('id_urgency');
+    const warningDiv = document.getElementById('urgencyWarning');
+    if (urgencySelect && warningDiv) {
+        function toggleWarning() {
+            const value = urgencySelect.value;
+            warningDiv.hidden = !(value === 'medium' || value === 'high');
+        }
+        urgencySelect.addEventListener('change', toggleWarning);
+        toggleWarning();
+    }
+
+    // File attachment handling
+    (function() {
+        const fileInput = document.getElementById('id_files');
+        const dropZone = document.getElementById('dropZone');
+        const previewsContainer = document.getElementById('filePreviews');
+        let selectedFiles = [];
+
+        function updateInput() {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+        }
+
+        function renderPreviews() {
+            previewsContainer.innerHTML = '';
+            selectedFiles.forEach((file, idx) => {
+                const div = document.createElement('div');
+                div.className = 'file-preview';
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.onload = () => URL.revokeObjectURL(img.src);
+                    div.appendChild(img);
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'file-name';
+                    span.textContent = file.name.length > 20 ? file.name.slice(0,17)+'...' : file.name;
+                    div.appendChild(span);
+                }
+                const btn = document.createElement('button');
+                btn.className = 'remove-btn';
+                btn.innerHTML = '&times;';
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    selectedFiles.splice(idx, 1);
+                    renderPreviews();
+                    updateInput();
+                });
+                div.appendChild(btn);
+                previewsContainer.appendChild(div);
+            });
+        }
+
+        fileInput.addEventListener('change', () => {
+            Array.from(fileInput.files).forEach(f => selectedFiles.push(f));
+            renderPreviews();
+            updateInput();
+        });
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            Array.from(e.dataTransfer.files).forEach(f => selectedFiles.push(f));
+            renderPreviews();
+            updateInput();
+        });
+
+        dropZone.addEventListener('click', (e) => {
+            if (e.target === dropZone || e.target.tagName === 'P') {
+                fileInput.click();
+            }
+        });
+    })();
+</script>
 {% endblock %}

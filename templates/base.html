@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -6,25 +7,27 @@
     <title>{% block title %}TicketSystem141{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap"
+          rel="stylesheet">
     <style>
         :root {
-            --bg:        #f5f3ef;
+            /* Updated to Forest/Sage Green Palette */
+            --bg:        #f0f4f1; /* Soft sage grey */
             --surface:   #ffffff;
-            --surface-2: #f0ede8;
-            --border:    #ddd9d2;
-            --accent:    #2b5278;
-            --accent-dk: #1e3d5c;
-            --accent-lt: #e8f0f8;
-            --text:      #1a1a1a;
-            --text-2:    #555550;
-            --text-3:    #888882;
+            --surface-2: #e8ece9; /* Slightly darker sage hint */
+            --border:    #d1d9d2;
+            --accent:    #2d6a4f; /* Primary Forest Green */
+            --accent-dk: #1b4332; /* Deep Dark Green */
+            --accent-lt: #d8f3dc; /* Light Mint */
+            --text:      #1a1d1a;
+            --text-2:    #4a544d;
+            --text-3:    #7b877f;
             --danger:    #c0392b;
-            --success:   #27ae60;
+            --success:   #2d6a4f; /* Re-using primary green for success */
             --warn:      #d68910;
             --radius:    10px;
-            --shadow:    0 2px 12px rgba(0,0,0,0.07);
-            --shadow-md: 0 4px 24px rgba(0,0,0,0.10);
+            --shadow:    0 2px 12px rgba(27, 67, 50, 0.08);
+            --shadow-md: 0 4px 24px rgba(27, 67, 50, 0.12);
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -150,6 +153,7 @@
             display: flex;
             align-items: center;
         }
+
         .bell-btn {
             background: none;
             border: none;
@@ -161,48 +165,66 @@
             align-items: center;
             transition: background 0.15s;
         }
+
         .bell-btn:hover {
             background: rgba(255,255,255,0.15);
             color: #fff;
         }
+
         .bell-badge {
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            background: var(--danger);
-            color: #fff;
-            font-size: 0.68rem;
-            font-weight: 700;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 9px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 4px;
-            line-height: 1;
-        }
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        background: var(--danger);
+        color: #fff;
+        font-size: 0.68rem;
+        font-weight: 700;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+        line-height: 1;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
         .bell-badge.hidden {
             display: none;
         }
+
+        /* Bell dropdown */
         .bell-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 8px;
-            width: 320px;
-            max-height: 360px;
-            overflow-y: auto;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            box-shadow: var(--shadow-md);
-            z-index: 200;
-            font-size: 0.88rem;
-        }
-        .bell-dropdown.hidden {
-            display: none;
-        }
+position: absolute;
+top: 100%;
+right: 0;
+margin-top: 8px;
+width: 320px;
+max-width: calc(100vw - 2rem);
+max-height: 360px;
+overflow-y: auto;
+background: var(--surface);
+border: 1px solid var(--border);
+border-radius: 12px;
+box-shadow: var(--shadow-md);
+z-index: 200;
+font-size: 0.88rem;
+/* Initial hidden state for smooth toggle */
+opacity: 0;
+visibility: hidden;
+transform: translateY(-10px);
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+pointer-events: none;
+}
+
+.bell-dropdown.active {
+opacity: 1;
+visibility: visible;
+transform: translateY(0);
+pointer-events: auto;
+}
+
         .bell-dropdown-header {
             padding: 0.75rem 1rem;
             font-weight: 600;
@@ -210,9 +232,11 @@
             border-bottom: 1px solid var(--border);
             background: var(--surface-2);
         }
+
         .bell-dropdown-list {
             padding: 0.5rem 0;
         }
+
         .bell-item {
             display: block;
             padding: 0.6rem 1rem;
@@ -221,22 +245,35 @@
             transition: background 0.1s;
             border-bottom: 1px solid var(--border);
         }
+
         .bell-item:hover {
             background: var(--accent-lt);
             text-decoration: none;
         }
+
         .bell-item-text {
             font-weight: 500;
             margin-bottom: 0.15rem;
         }
+
         .bell-item-time {
             font-size: 0.75rem;
             color: var(--text-3);
         }
+
         .bell-empty {
             padding: 1rem;
             text-align: center;
             color: var(--text-3);
+        }
+
+        .bell-item.read {
+            opacity: 0.6;
+            background: var(--surface-2);
+        }
+
+        .bell-item.read:hover {
+            background: var(--accent-lt);
         }
 
         .alert-info    { background: var(--accent-lt); border-left: 3px solid var(--accent); color: var(--accent-dk); }
@@ -314,7 +351,8 @@
 
         input:focus, select:focus, textarea:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(43, 82, 120, 0.12);
+            /* Green Glow on Focus */
+            box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.12);
         }
 
         textarea { resize: vertical; min-height: 110px; }
@@ -358,7 +396,8 @@
             border: 1px solid var(--border);
         }
 
-        .badge-open       { background: #eaf3fb; color: #1e5a8a; border-color: #b8d9f0; }
+        /* Updated Badges to match Green theme */
+        .badge-open       { background: #eaf3fb; color: #1e5a8a; border-color: #b8d9f0; } /* Keeping specific blue for status is often helpful for variety */
         .badge-resolved   { background: #eafaf1; color: #1a5c37; border-color: #a8ddb8; }
         .badge-closed     { background: #f4f4f4; color: #555; border-color: #ccc; }
         .badge-high       { background: #fdf0ef; color: #7b1c14; border-color: #f0b8b4; }
@@ -402,86 +441,397 @@
             background: var(--surface);
             margin-top: auto;
         }
+        .bell-dropdown.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+        @keyframes bell-shake {
+        0% { transform: rotate(0); }
+        15% { transform: rotate(15deg); }
+        30% { transform: rotate(-15deg); }
+        45% { transform: rotate(10deg); }
+        60% { transform: rotate(-10deg); }
+        75% { transform: rotate(5deg); }
+        85% { transform: rotate(-5deg); }
+        100% { transform: rotate(0); }
+    }
+
+    .bell-shake-anim {
+        animation: bell-shake 0.6s both;
+    }
 
         /* ── RESPONSIVE ── */
         @media (max-width: 680px) {
-            nav { flex-wrap: wrap; height: auto; padding: 0.75rem 0; gap: 0.5rem; }
-            .nav-brand { margin-right: 0; }
-            .nav-right { margin-left: 0; width: 100%; }
-            main { padding: 0 1rem; margin: 1.25rem auto; }
-            h1 { font-size: 1.35rem; }
+            nav {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 0.5rem 0.75rem;
+                gap: 0.5rem;
+            }
+            .nav-brand {
+                margin-right: 0;
+            }
+            .nav-right {
+                margin-left: 0;
+                width: 100%;
+                justify-content: space-between;
+            }
+            .notification-bell {
+                order: -1;                  /* bell leftmost on mobile */
+            }
+            main {
+                padding: 0 1rem;
+                margin: 1.25rem auto;
+            }
+            h1 {
+                font-size: 1.35rem;
+            }
+
+            /* Bigger tap targets */
+            .btn, button[type="submit"], .nav-logout-btn {
+                padding: 0.7rem 1.2rem;
+                font-size: 1rem;
+            }
+            input, select, textarea {
+                padding: 0.65rem 0.9rem;
+                font-size: 1rem;
+            }
+
+            /* Bell dropdown on mobile: full-width panel under header */
+            .bell-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 12px;
+        width: 320px;
+        max-width: calc(100vw - 2rem);
+        max-height: 360px;
+        overflow-y: auto;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+        z-index: 200;
+        font-size: 0.88rem;
+
+        /* Initial hidden state for animation */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+    }
         }
+
+        @media (max-width: 400px) {
+            body {
+                font-size: 14px;
+            }
+            .card {
+                padding: 1.25rem;
+            }
+            footer {
+                padding: 1rem 0.5rem;
+            }
+        }
+            .filter-select {
+        padding: 0.4rem 0.6rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        font-size: 0.85rem;
+        background: white;
+    }
     </style>
 </head>
 <body>
-    <header>
-        <nav>
-            <a class="nav-brand" href="{% url 'home' %}">TicketSystem141</a>
-            <div class="nav-links">
-                {% if user.is_authenticated %}
-                    <a href="{% url 'home' %}">Заявки</a>
-                    <a href="{% url 'tickets:ticket_create' %}">Создать заявку</a>
-                {% endif %}
-            </div>
-            <!-- Inside base.html, replace the nav-right part -->
-<div class="nav-right">
-    {% if user.is_authenticated %}
-        <!-- NOTIFICATION BELL -->
-        <div class="notification-bell" id="notificationBell">
-            <button class="bell-btn" id="bellButton">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                </svg>
-                {% if unread_count > 0 %}
+<header>
+    <nav>
+        <a class="nav-brand" href="{% url 'home' %}">
+            <img src="{% static 'images/logo.svg' %}" alt=""
+                 style="height: 2rem; vertical-align: middle; margin-right: 0.3rem;">
+            СОТА 141
+        </a>
+        <div class="nav-links">
+            {% if user.is_authenticated %}
+            <a href="{% url 'home' %}">Заявки</a>
+            <a href="{% url 'tickets:ticket_create' %}">Создать заявку</a>
+            {% endif %}
+        </div>
+        <!-- Inside base.html, replace the nav-right part -->
+        <div class="nav-right">
+            {% if user.is_authenticated %}
+            <!-- NOTIFICATION BELL -->
+            <div class="notification-bell" id="notificationBell">
+                <button class="bell-btn" id="bellButton">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    {% if unread_count > 0 %}
                     <span class="bell-badge" id="bellBadge">{{ unread_count }}</span>
-                {% else %}
+                    {% else %}
                     <span class="bell-badge hidden" id="bellBadge">0</span>
-                {% endif %}
-            </button>
-            <div class="bell-dropdown hidden" id="bellDropdown">
-                <div class="bell-dropdown-header">Уведомления</div>
-                <div class="bell-dropdown-list" id="bellList">
-                    {% for notif in recent_notifications %}
-                        <a href="{% url 'tickets:ticket_detail' notif.ticket.pk %}" class="bell-item" data-notif-id="{{ notif.id }}">
-                            <div class="bell-item-text">{{ notif.message }}</div>
-                            <div class="bell-item-time">{{ notif.created_at|date:"d.m H:i" }}</div>
-                        </a>
-                    {% empty %}
-                        <div class="bell-empty">Нет новых уведомлений</div>
-                    {% endfor %}
+                    {% endif %}
+                </button>
+                <div class="bell-dropdown" id="bellDropdown">
+                    <div class="bell-dropdown-header">
+                        Уведомления
+                        <span style="font-size:0.75rem; margin-left:0.5rem; opacity:0.7;" id="bellLoading" hidden>Загрузка...</span>
+                    </div>
+                    <div class="bell-dropdown-list" id="bellList">
+                        <!-- Filled by JavaScript -->
+                        <div class="bell-empty" id="bellEmpty">Загрузка...</div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <span class="nav-user">{{ user.username }} - {{ user.get_role_display }}</span>
-        <form action="{% url 'logout' %}" method="post" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit" class="nav-logout-btn">Выйти</button>
-        </form>
-    {% else %}
-        <a href="{% url 'login' %}" style="color:rgba(255,255,255,0.82); font-size:0.9rem;">Войти</a>
-    {% endif %}
+            <span class="nav-user" style="display:flex; align-items:center; gap:0.5rem;">
+              {{ user.username }} - {{ user.get_role_display }}
+              <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="nav-logout-btn" style="white-space:nowrap;">Выйти</button>
+              </form>
+            </span>
+            {% else %}
+            <a href="{% url 'login' %}" style="color:rgba(255,255,255,0.82); font-size:0.9rem;">Войти</a>
+            <script>
+    (function() {
+        const bellBtn = document.getElementById('bellButton');
+        const bellDropdown = document.getElementById('bellDropdown');
+        const bellBadge = document.getElementById('bellBadge');
+        const bellList = document.getElementById('bellList');
+        const bellEmpty = document.getElementById('bellEmpty');
+        const bellLoading = document.getElementById('bellLoading');
+
+        let unreadCount = parseInt("{{ unread_count|default:0 }}", 10);
+        let readPage = 1;
+        let hasMoreRead = true;
+        let isLoading = false;
+
+        function updateBadge() {
+            if (!bellBadge) return;
+            bellBadge.textContent = unreadCount;
+            unreadCount > 0 ? bellBadge.classList.remove('hidden') : bellBadge.classList.add('hidden');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(iso) {
+            const d = new Date(iso);
+            return d.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+        }
+
+        function createItem(notif) {
+            const a = document.createElement('a');
+            a.className = 'bell-item' + (notif.read ? ' read' : '');
+            a.href = '/tickets/' + notif.ticket_pk + '/';
+            a.dataset.id = notif.id;
+            a.innerHTML = `
+                <div class="bell-item-text">${escapeHtml(notif.message)}</div>
+                <div class="bell-item-time">${formatDate(notif.created_at)}</div>
+            `;
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                markRead(notif.id, a, notif.read);
+                setTimeout(() => location.href = a.href, 200);
+            });
+            return a;
+        }
+
+        function insertDivider(label) {
+            const div = document.createElement('div');
+            div.className = 'bell-divider';
+            div.textContent = label;
+            div.style.cssText = 'padding:0.25rem 1rem; font-size:0.75rem; color:var(--text-3); border-bottom:1px solid var(--border); margin:0.25rem 0;';
+            return div;
+        }
+
+        // Load initial data (all unread + first page of read)
+        async function loadNotifications() {
+            if (isLoading) return;
+            isLoading = true;
+            if (bellLoading) bellLoading.hidden = false;
+            try {
+                const resp = await fetch(`/notifications/api/list/?page=1&page_size=5`);
+                if (!resp.ok) throw new Error('Failed');
+                const data = await resp.json();
+                bellList.innerHTML = '';
+
+                // Unread group
+                if (data.unread.length > 0) {
+                    bellList.appendChild(insertDivider('Новые'));
+                    data.unread.forEach(n => bellList.appendChild(createItem(n)));
+                }
+
+                // Read group
+                if (data.read.length > 0) {
+                    bellList.appendChild(insertDivider('Прочитанные'));
+                    data.read.forEach(n => bellList.appendChild(createItem(n)));
+                } else if (data.unread.length === 0) {
+                    bellList.innerHTML = '<div class="bell-empty">Нет уведомлений</div>';
+                }
+
+                hasMoreRead = data.has_next;
+                readPage = data.page;
+                unreadCount = data.unread_count;
+                updateBadge();
+            } catch (err) {
+                console.error('Notification load error', err);
+            } finally {
+                isLoading = false;
+                if (bellLoading) bellLoading.hidden = true;
+            }
+        }
+
+        // Load more read notifications on scroll
+        async function loadMoreRead() {
+            if (isLoading || !hasMoreRead) return;
+            isLoading = true;
+            try {
+                const resp = await fetch(`/notifications/api/list/?page=${readPage + 1}&page_size=5`);
+                const data = await resp.json();
+                data.read.forEach(n => bellList.appendChild(createItem(n)));
+                hasMoreRead = data.has_next;
+                readPage = data.page;
+            } catch (err) {
+                console.error(err);
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        if (bellDropdown) {
+            bellDropdown.addEventListener('scroll', function() {
+                if (isLoading || !hasMoreRead) return;
+                const nearBottom = bellDropdown.scrollHeight - bellDropdown.scrollTop - bellDropdown.clientHeight < 5;
+                if (nearBottom) loadMoreRead();
+            });
+        }
+
+        // Toggle dropdown
+        if (bellBtn) {
+            bellBtn.addEventListener('click', function(e) {
+             e.stopPropagation();
+             bellDropdown.classList.toggle('active');
+             if (bellDropdown.classList.contains('active') && bellList.children.length === 0) {
+              loadNotifications();
+             }
+            });
+            document.addEventListener('click', function(e) {
+             if (bellDropdown.classList.contains('active') && !bellDropdown.contains(e.target) && e.target !== bellBtn) {
+              bellDropdown.classList.remove('active');
+             }
+            });
+        }
+
+        // Mark as read and move to read group instantly
+        async function markRead(id, el, alreadyRead) {
+            if (alreadyRead) return; // already read, just navigate
+            try {
+                const resp = await fetch(`/notifications/api/mark-read/${id}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    unreadCount = data.unread_count;
+                    updateBadge();
+                    // Move element to read section (after divider if exists)
+                    el.classList.add('read');
+                    const readDivider = [...bellList.children].find(c => c.textContent === 'Прочитанные');
+                    if (readDivider) {
+                        bellList.insertBefore(el, readDivider.nextSibling);
+                    } else {
+                        bellList.appendChild(insertDivider('Прочитанные'));
+                        bellList.appendChild(el);
+                    }
+                }
+            } catch (err) {
+                console.error('Mark read error', err);
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Real‑time WebSocket
+        const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
+        function connectWs() {
+            const ws = new WebSocket(wsScheme + '://' + location.host + '/ws/notifications/');
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'notification_update') {
+                        unreadCount = data.unread_count || 0;
+                        updateBadge();
+                        if (data.new_notification) {
+                            const notif = data.new_notification;
+                            const item = createItem({ id: notif.id, message: notif.message, ticket_pk: notif.ticket_pk, created_at: notif.created_at, read: false });
+                            // Insert at top of unread group
+                            const firstUnread = bellList.querySelector('.bell-item:not(.read)');
+                            if (firstUnread) {
+                                bellList.insertBefore(item, firstUnread);
+                            } else {
+                                // No unread yet – insert before read divider
+                                const readDivider = bellList.querySelector('.bell-divider');
+                                bellList.insertBefore(item, readDivider || bellList.firstChild);
+                            }
+                            // Remove empty message
+                            if (bellEmpty.parentNode) bellEmpty.remove();
+                        }
+                    }
+                } catch (e) {}
+            };
+            ws.onclose = () => setTimeout(connectWs, 3000);
+            ws.onerror = () => ws.close();
+        }
+        connectWs();
+
+        // Initial load
+        loadNotifications();
+    })();
+</script>
+            {% endif %}
+        </div>
+    </nav>
+</header>
+
+{% if messages %}
+<div class="messages-wrap">
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
 </div>
-        </nav>
-    </header>
+{% endif %}
 
-    {% if messages %}
-        <div class="messages-wrap">
-            {% for message in messages %}
-                <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
+<main>
+    {% block content %}{% endblock %}
+</main>
 
-    <main>
-        {% block content %}{% endblock %}
-    </main>
-
-    <footer>
-        TicketSystem141 - IT Support Portal
-    </footer>
+<footer>
+    Система обработки технических аварий гимназии №141 г. Казани - Кошелев Роман © {% now "Y" %}
+</footer>
+<!-- Notification bell: lazy loading + two‑group separation + real‑time -->
+{% block extra_js %}{% endblock %}
 </body>
 </html>

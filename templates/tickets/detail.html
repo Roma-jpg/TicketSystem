@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}{{ ticket.ticket_number }}{% endblock %}
-
+{% load static %}
 {% block content %}
 <style>
     .detail-header {
@@ -133,10 +133,30 @@
 
     .empty-note { color: var(--text-3); font-size: 0.9rem; font-style: italic; }
 
-    @media (max-width: 600px) {
-        .form-row { flex-direction: column; }
-        .info-grid { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 500px) {
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+        .form-row {
+            flex-direction: column;
+        }
+        .detail-header {
+            flex-direction: column;
+        }
     }
+    /* Fix long filenames */
+.attachment-link {
+ word-break: break-all;
+ overflow-wrap: break-word;
+ max-width: 100%;
+ display: inline-block;
+}
+
+/* Keep section title clear */
+.section-title {
+ clear: both;
+ display: block;
+}
 </style>
 
 <!-- TICKET HEADER -->
@@ -152,7 +172,7 @@
                     {{ ticket.get_urgency_display }}
                 </span>
                 {% if ticket.is_overdue %}
-                    <span class="badge badge-high">Просрочена</span>
+                <span class="badge badge-high">Просрочена</span>
                 {% endif %}
             </div>
         </div>
@@ -173,7 +193,7 @@
         </div>
         <div class="info-item">
             <div class="info-label">Создал</div>
-            <div class="info-value">{{ ticket.created_by.username }}</div>
+            <div class="info-value">{{ ticket.submitted_by_display }}</div>
         </div>
         <div class="info-item">
             <div class="info-label">Создана</div>
@@ -205,24 +225,73 @@
     </div>
 </div>
 
+<!-- ASSIGNMENT (only for IT) – separate card, OUTSIDE any form -->
+{% if is_it %}
+<div class="card" style="padding:1.25rem;">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="assign">
+        <div style="display:flex; align-items:flex-end; gap:1rem;">
+            <div class="field-group" style="flex:1; margin-bottom:0;">
+                <label for="assign_to">Назначить на</label>
+                <select name="assign_to" id="assign_to" class="filter-select" style="width:100%;">
+                    <option value="">-- Выберите ИТ сотрудника --</option>
+                    {% for user in it_users %}
+                    <option value="{{ user.pk }}"
+                            {% if ticket.assigned_to_id == user.pk %}selected{% endif %}>
+                        {{ user.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn">Назначить</button>
+            <button type="submit" name="assign_to" value="{{ request.user.pk }}"
+                    class="btn" style="background:var(--accent-dk);">
+                Назначить на меня
+            </button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+{% if is_it %}
+<div class="card" style="padding:1.25rem;">
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="change_status">
+    <div style="display:flex; align-items:flex-end; gap:1rem;">
+      <div class="field-group" style="flex:1; margin-bottom:0;">
+        <label for="new_status">Изменить статус</label>
+        <select name="new_status" id="new_status" class="filter-select" style="width:100%;">
+          {% for value, label in ticket.Status.choices %}
+            <option value="{{ value }}" {% if ticket.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn">Обновить статус</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
 <!-- ATTACHMENTS LIST -->
 <div class="card">
     <div class="section-title">Вложения</div>
     {% if ticket.attachments.all %}
-        <ul style="margin-bottom:1.25rem;">
-            {% for att in ticket.attachments.all %}
-                <li style="border-radius:8px; padding:0.65rem 1rem;">
-                    <a class="attachment-link" href="{{ att.file.url }}">
-                        <span>📎</span> {{ att.file.name }}
-                    </a>
-                    <span style="color:var(--text-3); font-size:0.82rem; margin-left:0.75rem;">
-                        {{ att.uploaded_by.username }}, {{ att.uploaded_at|date:"d.m.Y H:i" }}
-                    </span>
-                </li>
-            {% endfor %}
-        </ul>
+    <ul style="margin-bottom:1.25rem;">
+        {% for att in ticket.attachments.all %}
+        <li style="border-radius:8px; padding:0.65rem 1rem;">
+            <a class="attachment-link" href="{{ att.file.url }}">
+                <span>📎</span> {{ att.file.name }}
+            </a>
+            <span style="color:var(--text-3); font-size:0.82rem; margin-left:0.75rem;">
+                {{ att.uploaded_by.username|default:"Гость" }}, {{ att.uploaded_at|date:"d.m.Y H:i" }}
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
     {% else %}
-        <p class="empty-note" style="margin-bottom:1.25rem;">Вложений нет.</p>
+    <p class="empty-note" style="margin-bottom:1.25rem;">Вложений нет.</p>
     {% endif %}
 
     <form method="post" enctype="multipart/form-data">
@@ -238,24 +307,44 @@
     </form>
 </div>
 
-<!-- COMMENTS -->
-<div class="card">
+{% if user.is_authenticated and user.role == 'teacher' and ticket.created_by == user and not ticket.assigned_to %}
+<div style="margin-top:1rem;">
+  <form method="post" action="{% url 'tickets:ticket_delete' ticket.pk %}" onsubmit="return confirm('Удалить заявку навсегда?');">
+    {% csrf_token %}
+    <button type="submit" class="btn" style="background:var(--danger);">Удалить заявку</button>
+  </form>
+</div>
+{% endif %}
+
+<!-- COMMENTS (with id for WebSocket) -->
+<div class="card" id="comments-container">
     <div class="section-title">Комментарии</div>
-    {% if ticket.comments.all %}
-        <div style="margin-bottom:1.5rem;">
-            {% for comment in ticket.comments.all %}
-                <div class="comment-item">
-                    <div class="comment-meta">
-                        <strong>{{ comment.author.username }}</strong>
-                        <span>{{ comment.created_at|date:"d.m.Y H:i" }}</span>
-                        {% if comment.internal %}<span style="color:var(--warn);">Внутренний</span>{% endif %}
-                    </div>
-                    <div class="comment-body">{{ comment.comment|linebreaks }}</div>
-                </div>
-            {% endfor %}
+
+    {% for comment in public_comments %}
+    <div class="comment-item">
+        <div class="comment-meta">
+            <strong>{{ comment.author.username }}</strong>
+            <span>{{ comment.created_at|date:"d.m.Y H:i" }}</span>
         </div>
-    {% else %}
-        <p class="empty-note" style="margin-bottom:1.5rem;">Комментариев пока нет.</p>
+        <div class="comment-body">{{ comment.comment|linebreaks }}</div>
+    </div>
+    {% empty %}
+    <p class="empty-note" style="margin-bottom:1.5rem;">Комментариев пока нет.</p>
+    {% endfor %}
+
+    {% if internal_comments %}
+    <hr>
+    <h3 style="color:var(--warn); margin-bottom:0.75rem;">Внутренние заметки</h3>
+    {% for comment in internal_comments %}
+    <div class="comment-item" style="background:#fff8e1;">
+        <div class="comment-meta">
+            <strong>{{ comment.author.username }}</strong>
+            <span>{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+            <span style="color:var(--warn);">Внутренний</span>
+        </div>
+        <div class="comment-body">{{ comment.comment|linebreaks }}</div>
+    </div>
+    {% endfor %}
     {% endif %}
 
     <form method="post">
@@ -265,6 +354,14 @@
             <label for="{{ comment_form.comment.id_for_label }}">{{ comment_form.comment.label }}</label>
             {{ comment_form.comment }}
         </div>
+        {% if is_it %}
+        <div class="field-group" style="margin-bottom:0.75rem;">
+            <label for="{{ comment_form.internal.id_for_label }}">
+                {{ comment_form.internal.label }}
+            </label>
+            {{ comment_form.internal }}
+        </div>
+        {% endif %}
         <button type="submit" class="btn">Отправить комментарий</button>
     </form>
 </div>
@@ -273,21 +370,166 @@
 <div class="card">
     <div class="section-title">История изменений</div>
     {% if ticket.history.all %}
-        <div>
-            {% for item in ticket.history.all %}
-                <div class="history-item">
-                    <div class="history-dot"></div>
-                    <div>
-                        <span class="history-time">{{ item.changed_at|date:"d.m.Y H:i" }}</span>
-                        -
-                        {% if item.old_status %}{{ item.get_old_status_display }} &rarr; {% endif %}{{ item.get_new_status_display }}
-                        {% if item.note %}<span style="color:var(--text-3);">&nbsp;- {{ item.note }}</span>{% endif %}
-                    </div>
-                </div>
-            {% endfor %}
+    <div>
+        {% for item in ticket.history.all %}
+        <div class="history-item">
+            <div class="history-dot"></div>
+            <div>
+                <span class="history-time">{{ item.changed_at|date:"d.m.Y H:i" }}</span>
+                -
+                {% if item.old_status %}{{ item.get_old_status_display }} &rarr; {% endif %}{{
+                item.get_new_status_display }}
+                {% if item.note %}<span style="color:var(--text-3);">&nbsp;- {{ item.note }}</span>{% endif %}
+            </div>
         </div>
+        {% endfor %}
+    </div>
     {% else %}
-        <p class="empty-note">История пуста.</p>
+    <p class="empty-note">История пуста.</p>
     {% endif %}
 </div>
+{% endblock %}
+
+{# WebSocket script – placed at bottom of body via base block #}
+{% block extra_js %}
+<script>
+    (function() {
+    // Helper to get CSRF token
+    function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+    const cookie = cookies[i].trim();
+    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+    break;
+    }
+    }
+    }
+    return cookieValue;
+    }
+
+    // AJAX submission for comment form
+    const commentForm = document.querySelector('form[action=""] input[value="comment"]')?.closest('form');
+    if (commentForm) {
+     commentForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(commentForm);
+      formData.append('action', 'comment');
+      try {
+       const resp = await fetch('', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') }
+       });
+       if (resp.ok) {
+        const data = await resp.json();
+        // WebSocket will add the comment; just clear form and show success
+        commentForm.reset();
+        // Optionally show a message (you can use the Django messages framework but page not refreshed)
+        // For now, alert or just ignore.
+       } else {
+        alert('Ошибка при отправке комментария.');
+       }
+      } catch (err) {
+       console.error(err);
+      }
+     });
+    }
+
+    // AJAX submission for attachment form
+    const attachmentForm = document.querySelector('form[action=""] input[value="attachment"]')?.closest('form');
+    if (attachmentForm) {
+     attachmentForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(attachmentForm);
+      formData.append('action', 'attachment');
+      try {
+       const resp = await fetch('', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') }
+       });
+       if (resp.ok) {
+        attachmentForm.reset();
+        alert('Вложение добавлено.');
+       } else {
+        alert('Ошибка загрузки.');
+       }
+      } catch (err) {
+       console.error(err);
+      }
+     });
+    }
+
+    // WebSocket code (unchanged)
+    const ticketId = "{{ ticket.pk }}";
+    const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    let socket;
+
+    function connect() {
+    socket = new WebSocket(wsScheme + '://' + location.host + '/ws/tickets/' + ticketId + '/');
+    socket.onmessage = function(event) {
+    try {
+    const data = JSON.parse(event.data);
+    if (data.event === 'comment_added') {
+    addComment(data);
+    } else if (data.event === 'status_changed') {
+    console.log('Status changed:', data);
+    }
+    } catch(e) {
+    console.error('WS parse error', e);
+    }
+    };
+    socket.onclose = () => setTimeout(connect, 3000);
+    socket.onerror = () => socket.close();
+    }
+
+    function addComment(data) {
+    if (document.getElementById('comment-' + data.comment_id)) return;
+    const container = document.getElementById('comments-container');
+
+    const div = document.createElement('div');
+    div.className = 'comment-item';
+    div.id = 'comment-' + data.comment_id;
+
+    const meta = document.createElement('div');
+    meta.className = 'comment-meta';
+
+    const strong = document.createElement('strong');
+    strong.textContent = data.author;
+
+    const span = document.createElement('span');
+    span.textContent = data.created_at;
+
+    if (data.internal) {
+    const badge = document.createElement('span');
+    badge.style.color = 'var(--warn)';
+    badge.textContent = ' Внутренний';
+    meta.appendChild(badge);
+    }
+
+    meta.appendChild(strong);
+    meta.appendChild(span);
+    div.appendChild(meta);
+
+    const body = document.createElement('div');
+    body.className = 'comment-body';
+    body.textContent = data.comment;
+    div.appendChild(body);
+
+    if (container.firstChild) {
+    container.insertBefore(div, container.firstChild);
+    } else {
+    container.appendChild(div);
+    }
+
+    const emptyNote = document.querySelector('.empty-note');
+    if (emptyNote) emptyNote.remove();
+    }
+
+    connect();
+    })();
+</script>
 {% endblock %}

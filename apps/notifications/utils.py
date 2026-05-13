@@ -4,6 +4,7 @@ import redis
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
+from django.utils import timezone
 
 from .models import Notification
 
@@ -40,9 +41,9 @@ def create_notification(recipient_id, ticket, notif_type, message, triggered_by=
         logger.exception("Unexpected error during Redis presence check.")
 
     if is_viewing:
-        # Mark as read because the user is on the ticket page
         notif.read = True
-        notif.save(update_fields=["read"])
+        notif.read_at = timezone.now()  # ← add
+        notif.save(update_fields=["read", "read_at"])
     else:
         # Push bell update via channel layer (also guarded)
         try:

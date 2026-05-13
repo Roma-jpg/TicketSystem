@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Гостевая заявка{% endblock %}
+
+{% block content %}
+<style>
+    .form-wrap { max-width: 700px; }
+    .form-wrap .card { padding: 2rem 2.25rem; }
+    .form-wrap h1 { margin-bottom: 0.35rem; }
+    .form-subtitle { color: var(--text-3); font-size: 0.92rem; margin-bottom: 1.75rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
+    .field-full { grid-column: 1 / -1; }
+    .field-group { margin-bottom: 1.2rem; }
+    .field-group label { display: block; font-weight: 600; font-size: 0.82rem; color: var(--text-2); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-actions { display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
+    .btn-cancel { color: var(--text-3); font-size: 0.9rem; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+    .btn-cancel:hover { color: var(--text); background: none; }
+
+    /* Attachment area */
+    .attachments-area { margin-top: 1rem; border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; background: var(--surface-2); }
+    .attachments-area:hover { border-color: var(--accent); }
+    .attachments-area input[type="file"] { display: none; }
+    .file-previews { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; }
+    .file-preview { position: relative; width: 100px; height: 100px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; display: flex; align-items: center; justify-content: center; }
+    .file-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .file-preview .file-name { font-size: 0.7rem; color: var(--text-3); padding: 0.25rem; text-align: center; word-break: break-all; }
+    .remove-btn { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; background: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; line-height: 1; cursor: pointer; border: none; }
+
+    .guest-urgency-note {
+        background: #fef9e7;
+        border: 1px solid #f5e07a;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        margin-bottom: 0.75rem;
+        color: #7d6608;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 560px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        .field-full {
+            grid-column: 1;
+        }
+        .form-actions {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+
+<div class="form-wrap">
+    <div class="card">
+        <h1>Создать гостевую заявку</h1>
+        <p class="form-subtitle">Опишите проблему – IT‑специалист свяжется с вами.</p>
+
+        <form method="post" enctype="multipart/form-data" id="guestForm">
+            {% csrf_token %}
+            <div class="form-grid">
+                {% for field in form %}
+                    {% if field.name != "captcha" and field.name != "urgency" %}
+                    <div class="field-group {% if field.name == 'description' or field.name == 'device_asset_tag' %}field-full{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <small style="color:var(--text-3); font-size:0.82rem;">{{ field.help_text }}</small>
+                        {% endif %}
+                        {% if field.errors %}
+                            <small style="color:var(--danger); font-size:0.82rem;">{{ field.errors|join:", " }}</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Urgency field with message -->
+                <div class="field-group">
+                    <label for="id_urgency">{{ form.urgency.label }}</label>
+                    <div class="guest-urgency-note">
+                        ⚠️ Для гостей доступна только <strong>низкая</strong> срочность.<br>
+                        Чтобы создать срочную заявку, <a href="{% url 'login' %}" style="color:var(--accent); font-weight:600;">войдите в систему</a>.
+                    </div>
+                    <select name="{{ form.urgency.name }}" id="id_urgency" disabled>
+                        <option value="low" selected>Низкая</option>
+                    </select>
+                    <input type="hidden" name="urgency" value="low">
+                    {% if form.urgency.errors %}
+                        <small style="color:var(--danger); font-size:0.82rem;">{{ form.urgency.errors|join:", " }}</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Captcha -->
+            <div class="field-group">
+                <label for="id_captcha">{{ form.captcha.label }}</label>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span>{{ form.captcha_question }}</span>
+                    <input type="text" name="captcha" id="id_captcha" required autocomplete="off" style="width:100px;">
+                </div>
+                {% if form.captcha.errors %}
+                    <small style="color:var(--danger); font-size:0.82rem;">{{ form.captcha.errors|join:", " }}</small>
+                {% endif %}
+            </div>
+
+            <!-- Attachment area -->
+            <div class="field-group">
+                <label>Прикрепить файлы (не больше 50 МБ всего)</label>
+                <div class="attachments-area" id="dropZone">
+                    <p style="color:var(--text-3);">Перетащите файлы сюда или кликните для выбора</p>
+                    <input type="file" name="files" id="id_files" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx">
+                </div>
+                <div class="file-previews" id="filePreviews"></div>
+                {% if attachment_form.files.errors %}
+                    <small style="color:var(--danger); font-size:0.82rem;">{{ attachment_form.files.errors|join:", " }}</small>
+                {% endif %}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">Отправить заявку</button>
+                <a href="{% url 'home' %}" class="btn-cancel">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    const fileInput = document.getElementById('id_files');
+    const dropZone = document.getElementById('dropZone');
+    const previewsContainer = document.getElementById('filePreviews');
+    let selectedFiles = [];
+
+    function updateInput() {
+        const dt = new DataTransfer();
+        selectedFiles.forEach(f => dt.items.add(f));
+        fileInput.files = dt.files;
+    }
+
+    function renderPreviews() {
+        previewsContainer.innerHTML = '';
+        selectedFiles.forEach((file, idx) => {
+            const div = document.createElement('div');
+            div.className = 'file-preview';
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.onload = () => URL.revokeObjectURL(img.src);
+                div.appendChild(img);
+            } else {
+                const span = document.createElement('span');
+                span.className = 'file-name';
+                span.textContent = file.name.length > 20 ? file.name.slice(0,17)+'...' : file.name;
+                div.appendChild(span);
+            }
+            const btn = document.createElement('button');
+            btn.className = 'remove-btn';
+            btn.innerHTML = '&times;';
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                selectedFiles.splice(idx, 1);
+                renderPreviews();
+                updateInput();
+            });
+            div.appendChild(btn);
+            previewsContainer.appendChild(div);
+        });
+    }
+
+    fileInput.addEventListener('change', () => {
+        Array.from(fileInput.files).forEach(f => selectedFiles.push(f));
+        renderPreviews();
+        updateInput();
+    });
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        Array.from(e.dataTransfer.files).forEach(f => selectedFiles.push(f));
+        renderPreviews();
+        updateInput();
+    });
+
+    dropZone.addEventListener('click', (e) => {
+        if (e.target === dropZone || e.target.tagName === 'P') {
+            fileInput.click();
+        }
+    });
+})();
+</script>
+{% endblock %}

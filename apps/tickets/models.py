@@ -1,9 +1,20 @@
+# apps/tickets/models.py
+
 import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.utils import timezone
+
+
+class TicketSequence(models.Model):
+    """Serial number counter for ticket numbers (one row per day)."""
+    date = models.DateField(unique=True)
+    last_number = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        app_label = "tickets"
 
 
 class Ticket(models.Model):
@@ -41,8 +52,27 @@ class Ticket(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ticket_number = models.CharField(max_length=64, unique=True, db_index=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_tickets")
-    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_tickets")
+
+    # For authenticated users
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,          # <-- now nullable for guest tickets
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="created_tickets",
+    )
+
+    # For guest tickets
+    guest_name = models.CharField(max_length=150, blank=True, default="")
+    guest_email = models.EmailField(blank=True, default="")
+
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assigned_tickets",
+    )
     room_number = models.CharField(max_length=32, db_index=True)
     device_type = models.CharField(max_length=32, choices=DeviceTypes.choices)
     device_asset_tag = models.CharField(max_length=128, blank=True)
@@ -70,29 +100,32 @@ class Ticket(models.Model):
         if self.merged_into_id and self.pk and self.merged_into_id == self.pk:
             raise ValidationError({"merged_into": "Ticket cannot be merged into itself."})
 
-    def _build_ticket_number(self):
-        date_str = timezone.now().strftime("%Y%m%d")
-        prefix = f"IT-{date_str}-"
-        next_number = 1
-        for existing_number in Ticket.objects.filter(ticket_number__startswith=prefix).values_list("ticket_number", flat=True):
-            try:
-                suffix = int(existing_number.rsplit("-", 1)[-1])
-            except (IndexError, ValueError):
-                continue
-            next_number = max(next_number, suffix + 1)
-        return f"{prefix}{next_number:04d}"
+    @property
+    def submitted_by_display(self):
+        """Return a readable name/email for who submitted this ticket."""
+        if self.created_by_id:
+            return self.created_by.username
+        return self.guest_name or "Guest"
 
     def save(self, *args, **kwargs):
         if self.ticket_number:
             return super().save(*args, **kwargs)
-        for _ in range(5):
-            self.ticket_number = self._build_ticket_number()
-            try:
-                with transaction.atomic():
+        max_retries = 5
+        with transaction.atomic():
+            for _ in range(max_retries):
+                try:
+                    date_str = timezone.now().strftime("%Y%m%d")
+                    prefix = f"IT-{date_str}-"
+                    seq, _ = TicketSequence.objects.select_for_update().get_or_create(
+                        date=timezone.now().date(), defaults={"last_number": 0}
+                    )
+                    seq.last_number += 1
+                    seq.save(update_fields=["last_number"])
+                    self.ticket_number = f"{prefix}{seq.last_number:04d}"
                     return super().save(*args, **kwargs)
-            except IntegrityError:
-                self.ticket_number = ""
-        raise IntegrityError("Unable to generate a unique ticket number.")
+                except IntegrityError:
+                    continue
+            raise  # all retries exhausted
 
     def __str__(self):
         return self.ticket_number
@@ -101,7 +134,7 @@ class Ticket(models.Model):
 class TicketAttachment(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="attachments")
     file = models.FileField(upload_to="ticket_attachments/")
-    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -124,8 +157,15 @@ class TicketComment(models.Model):
 
 class TicketHistory(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="history")
-    old_status = models.CharField(max_length=32, blank=True)
-    new_status = models.CharField(max_length=32)
+    old_status = models.CharField(
+        max_length=32,
+        blank=True,
+        choices=Ticket.Status.choices,       # ← add choices
+    )
+    new_status = models.CharField(
+        max_length=32,
+        choices=Ticket.Status.choices,       # ← add choices
+    )
     changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
     changed_at = models.DateTimeField(auto_now_add=True)
     note = models.TextField(blank=True)

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Панель управления{% endblock %}
+
+{% block content %}
+<style>
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 1.25rem 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    .stat-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        color: var(--text-3);
+        margin-bottom: 0.4rem;
+    }
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: var(--accent-dk);
+    }
+    .stat-detail {
+        font-size: 0.85rem;
+        color: var(--text-2);
+        margin-top: 0.25rem;
+    }
+    .section-title {
+        font-family: 'Lora', serif;
+        font-size: 1.2rem;
+        color: var(--accent-dk);
+        margin-bottom: 1rem;
+    }
+</style>
+
+<h1>Панель управления ИТ</h1>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-label">Открытые</div>
+        <div class="stat-value">{{ open_count }}</div>
+        <div class="stat-detail">включая открытые, переоткрытые, подтвержденные</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">В работе</div>
+        <div class="stat-value">{{ in_progress_count }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Просроченные</div>
+        <div class="stat-value" style="color: var(--danger)">{{ overdue_count }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Решено сегодня</div>
+        <div class="stat-value" style="color: var(--success)">{{ resolved_today }}</div>
+    </div>
+    {% if avg_hours %}
+    <div class="stat-card">
+        <div class="stat-label">Среднее время решения</div>
+        <div class="stat-value">{{ avg_hours|floatformat:1 }} ч</div>
+        <div class="stat-detail">за последние 30 дней</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Топ‑5 самых загруженных кабинетов</h2>
+    <ul>
+        {% for room in busy_rooms %}
+        <li style="display: flex; justify-content: space-between;">
+            <span>Каб. {{ room.room_number }}</span>
+            <span class="badge">{{ room.total }} заявок</span>
+        </li>
+        {% empty %}
+        <li>Нет данных</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="card">
+    <h2>Заявки за последние 7 дней</h2>
+    <div style="display: flex; align-items: flex-end; gap: 0.5rem; height: 150px;">
+        {% for day in daily_created %}
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
+            <div style="width:100%; background: var(--accent); border-radius:4px 4px 0 0;"
+                 title="{{ day.date }}: {{ day.count }}"
+                 style="height: {% widthratio day.count 10 100 %}px; max-height:120px;">
+            </div>
+            <small style="margin-top:0.25rem;">{{ day.date }}</small>
+        </div>
+        {% endfor %}
+    </div>
+    <small style="color:var(--text-3)">Количество созданных заявок по дням</small>
+</div>
+
+<div class="card">
+  <h2>Типы устройств с наибольшим числом заявок</h2>
+  <ul>
+    {% for item in device_stats %}
+    <li style="display: flex; justify-content: space-between;">
+      <span>{{ item.display_name }}</span>
+      <span class="badge">{{ item.count }} заявок</span>
+    </li>
+    {% empty %}
+    <li>Нет данных</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card">
+  <h2>Преподаватели с наибольшим числом проблем</h2>
+  <ul>
+    {% for item in teacher_stats %}
+    <li style="display: flex; justify-content: space-between;">
+      <span>{{ item.created_by__username }}</span>
+      <span class="badge">{{ item.count }} заявок</span>
+    </li>
+    {% empty %}
+    <li>Нет данных</li>
+    {% endfor %}
+  </ul>
+</div>
+
+{% endblock %}

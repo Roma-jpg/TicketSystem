@@ -24,6 +24,7 @@ class Notification(models.Model):
     )
     message = models.CharField(max_length=500)
     read = models.BooleanField(default=False, db_index=True)
+    read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     triggered_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
